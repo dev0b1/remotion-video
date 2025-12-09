@@ -2,15 +2,38 @@ const { bundle } = require('@remotion/bundler');
 const { renderMedia, selectComposition } = require('@remotion/renderer');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 
-const songsFolder = path.join(require('os').homedir(), 'Documents', 'premium_songs');
+// Allow overriding the songs and output directories with env vars for CI/Codespaces
+// If the repo already contains `public/audio/*.mp3`, prefer that (convenient for small test runs).
+const repoAudioDir = path.join(__dirname, 'public', 'audio');
+const defaultDocsDir = path.join(os.homedir(), 'Documents', 'premium_songs');
+let songsFolder = process.env.SONGS_FOLDER || defaultDocsDir;
+try {
+  if (fs.existsSync(repoAudioDir)) {
+    const repoMp3s = fs.readdirSync(repoAudioDir).filter((f) => f.toLowerCase().endsWith('.mp3'));
+    if (repoMp3s.length > 0) {
+      songsFolder = repoAudioDir;
+      console.log(`Using repository audio folder as songs source: ${songsFolder}`);
+    }
+  }
+} catch (e) {
+  // ignore and fall back to env or default
+}
 const outputFolder = path.join(require('os').homedir(), 'Documents', 'premium_videos');
 
 if (!fs.existsSync(outputFolder)) {
   fs.mkdirSync(outputFolder, { recursive: true });
 }
 
-let songs = fs.readdirSync(songsFolder).filter(f => f.endsWith('.mp3')).sort();
+let songs = [];
+try {
+  songs = fs.readdirSync(songsFolder).filter(f => f.toLowerCase().endsWith('.mp3')).sort();
+} catch (err) {
+  console.error(`\nError: songs folder not found: ${songsFolder}`);
+  console.error('Create the folder and add .mp3 files, or set the SONGS_FOLDER environment variable to point to your songs directory.');
+  process.exit(1);
+}
 
 // Optional metadata CSV next to the songs folder: songs.csv
 // Format: filename,hookText,bgColor,lyrics
