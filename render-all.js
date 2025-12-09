@@ -26,14 +26,35 @@ if (!fs.existsSync(outputFolder)) {
   fs.mkdirSync(outputFolder, { recursive: true });
 }
 
+// Pick songs folder from candidates in order: explicit SONGS_FOLDER, repo public/audio, default Documents dir
+const candidates = [];
+if (process.env.SONGS_FOLDER) candidates.push(process.env.SONGS_FOLDER);
+if (fs.existsSync(repoAudioDir)) candidates.push(repoAudioDir);
+candidates.push(defaultDocsDir);
+
 let songs = [];
-try {
-  songs = fs.readdirSync(songsFolder).filter(f => f.toLowerCase().endsWith('.mp3')).sort();
-} catch (err) {
-  console.error(`\nError: songs folder not found: ${songsFolder}`);
-  console.error('Create the folder and add .mp3 files, or set the SONGS_FOLDER environment variable to point to your songs directory.');
+let chosen = null;
+for (const cand of candidates) {
+  try {
+    if (!fs.existsSync(cand)) continue;
+    const found = fs.readdirSync(cand).filter((f) => f.toLowerCase().endsWith('.mp3'));
+    if (found.length > 0) {
+      songs = found.sort();
+      chosen = cand;
+      break;
+    }
+  } catch (e) {
+    // ignore and try next
+  }
+}
+
+if (!chosen) {
+  console.error(`\nNo MP3 files found in any candidate folders: ${candidates.join(', ')}`);
+  console.error('Add .mp3 files to one of these or set SONGS_FOLDER to point to your songs directory.');
   process.exit(1);
 }
+
+console.log(`Using songs folder: ${chosen} — ${songs.length} mp3(s) found`);
 
 // Optional metadata CSV next to the songs folder: songs.csv
 // Format: filename,hookText,bgColor,lyrics
