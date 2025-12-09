@@ -9,12 +9,21 @@
     "install-deps": "npm install"
   },
   "dependencies": {
+    "@remotion/bundler": "*",
+    "@remotion/renderer": "*",
     "@remotion/media-utils": "*",
+    "ffmpeg-static": "^4.4.0",
+    "adm-zip": "^0.5.9",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "remotion": "*"
   },
   "devDependencies": {
-    "@remotion/cli": "^4.0.382"
+    "@remotion/cli": "^4.0.382",
+    "typescript": "^5.5.0",
+    "ts-node": "^10.9.1",
+    "@types/node": "^20.4.1",
+    "@types/react": "^18.2.21",
+    "@types/react-dom": "^18.2.7"
   }
 }
