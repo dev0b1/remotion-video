@@ -8,12 +8,16 @@ const os = require('os');
 // If the repo already contains `public/audio/*.mp3`, prefer that (convenient for small test runs).
 const repoAudioDir = path.join(__dirname, 'public', 'audio');
 const defaultDocsDir = path.join(os.homedir(), 'Documents', 'premium_songs');
-let songsFolder = process.env.SONGS_FOLDER || defaultDocsDir;
 
-// In Codespaces / CI we prefer repo `public/audio` when it exists — it's where you placed MP3s.
-if (fs.existsSync(repoAudioDir)) {
-  songsFolder = repoAudioDir;
-  console.log(`Using repository audio folder as songs source: ${songsFolder}`);
+// Debug info (helps diagnose Codespaces ENOENT problems)
+console.log('SONGS_FOLDER env:', process.env.SONGS_FOLDER || '(unset)');
+console.log('repoAudioDir exists:', fs.existsSync(repoAudioDir));
+console.log('defaultDocsDir exists:', fs.existsSync(defaultDocsDir));
+
+// In Codespaces / CI we prefer repo `public/audio` when it exists — set SONGS_FOLDER to it.
+if (!process.env.SONGS_FOLDER && fs.existsSync(repoAudioDir)) {
+  process.env.SONGS_FOLDER = repoAudioDir;
+  console.log(`Auto-setting SONGS_FOLDER -> ${process.env.SONGS_FOLDER}`);
 }
 // Save rendered videos inside the repository workspace so Codespaces can access/download them.
 const outputFolder = path.join(__dirname, 'out');
