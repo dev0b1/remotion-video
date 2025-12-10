@@ -14,7 +14,8 @@ async function renderVideo(audioPath, textEvents = [], outputPath, opts = {}) {
 
   console.log(`Rendering ${path.basename(audioPath)} → ${outputPath} (${width}x${height}@${fps}fps)`);
 
-  const { canvas, ctx, audioMotion } = initAudioMotion(width, height);
+  const preset = (opts.preset || 'neon');
+  const { canvas, ctx, audioMotion } = require('./visualizer/audioMotionSetup').initAudioMotionPreset(preset, width, height, opts.presetOptions || {});
   const audioBuffer = await loadAudioBuffer(audioPath);
   const duration = audioBuffer.duration || 0;
   const totalFrames = Math.max(1, Math.floor(duration * fps));
@@ -51,6 +52,14 @@ async function renderVideo(audioPath, textEvents = [], outputPath, opts = {}) {
 
       // draw visualizer
       try { if (audioMotion && typeof audioMotion.draw === 'function') audioMotion.draw(); } catch (e) {}
+
+      // CPU-safe glow: shadow + color cycling
+      try {
+        const glowColors = opts.glowColors || ['#ff00ff', '#00ffff', '#8a2be2', '#ff0080'];
+        const colorIndex = Math.floor((t * 1.5) % glowColors.length);
+        ctx.shadowBlur = opts.shadowBlur || 30;
+        ctx.shadowColor = glowColors[colorIndex];
+      } catch (e) {}
 
       // draw popup text
       try { drawPopupText(ctx, textEvents, t, { width, height }); } catch (e) {}
