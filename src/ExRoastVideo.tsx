@@ -1,22 +1,8 @@
-import React, { useEffect, useRef } from 'react';
-import {
-  useCurrentFrame,
-  useVideoConfig,
-  interpolate,
-  AbsoluteFill,
-  Audio,
-  staticFile,
-} from 'remotion';
-import { useAudioData, visualizeAudio } from '@remotion/media-utils';
+// This file previously contained a Remotion component (ExRoastVideo).
+// The project has been migrated to a headless ffmpeg + canvas pipeline.
+// The original Remotion component was removed to avoid accidental usage.
 
-export const ExRoastVideo = ({
-  audioFileName,
-  hookText = "She left me for his best friend",
-  lyrics = [], // ← CHANGE THESE 4–6 LINES PER SONG
-}) => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const seconds = frame / fps;
+module.exports = {};
 
   // Audio
   const audioFile = audioFileName || 'audio/sample.mp3';
@@ -243,7 +229,7 @@ export const ExRoastVideo = ({
   );
 };
 
-export default ExRoastVideo;
+// Ex-Remotion component removed.
 
 /* ADD THIS ONCE IN YOUR PROJECT (global CSS or <style> tag) */
 try {
