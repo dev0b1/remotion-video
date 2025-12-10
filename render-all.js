@@ -9,16 +9,11 @@ const os = require('os');
 const repoAudioDir = path.join(__dirname, 'public', 'audio');
 const defaultDocsDir = path.join(os.homedir(), 'Documents', 'premium_songs');
 let songsFolder = process.env.SONGS_FOLDER || defaultDocsDir;
-try {
-  if (fs.existsSync(repoAudioDir)) {
-    const repoMp3s = fs.readdirSync(repoAudioDir).filter((f) => f.toLowerCase().endsWith('.mp3'));
-    if (repoMp3s.length > 0) {
-      songsFolder = repoAudioDir;
-      console.log(`Using repository audio folder as songs source: ${songsFolder}`);
-    }
-  }
-} catch (e) {
-  // ignore and fall back to env or default
+
+// In Codespaces / CI we prefer repo `public/audio` when it exists — it's where you placed MP3s.
+if (fs.existsSync(repoAudioDir)) {
+  songsFolder = repoAudioDir;
+  console.log(`Using repository audio folder as songs source: ${songsFolder}`);
 }
 const outputFolder = path.join(require('os').homedir(), 'Documents', 'premium_videos');
 
