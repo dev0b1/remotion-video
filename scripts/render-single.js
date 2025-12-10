@@ -5,8 +5,8 @@ const { renderVideo } = require('../src/renderVideo');
 (async () => {
   const arg = process.argv[2] || 'song.mp3';
   const audioFile = arg;
-  const audioPath = path.join(process.cwd(), 'assets', 'audio', audioFile);
-  const textPath = path.join(process.cwd(), 'assets', 'text', audioFile + '.json');
+  const audioPath = path.join(process.cwd(), 'public', 'audio', audioFile);
+  const textPath = path.join(process.cwd(), 'public', 'text', audioFile + '.json');
   const textEvents = fs.existsSync(textPath) ? JSON.parse(fs.readFileSync(textPath, 'utf8')) : [];
   const out = path.join(process.cwd(), 'output', audioFile.replace(/\.mp3$/i, '.mp4'));
 

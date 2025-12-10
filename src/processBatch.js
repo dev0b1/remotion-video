@@ -3,8 +3,8 @@ const path = require('path');
 const { renderVideo } = require('./renderVideo');
 
 async function processBatch() {
-  const folder = path.join(process.cwd(), 'assets', 'audio');
-  const textFolder = path.join(process.cwd(), 'assets', 'text');
+  const folder = path.join(process.cwd(), 'public', 'audio');
+  const textFolder = path.join(process.cwd(), 'public', 'text');
   const outDir = path.join(process.cwd(), 'output');
   if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
 
