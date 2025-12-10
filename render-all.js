@@ -22,31 +22,38 @@ if (!fs.existsSync(outputFolder)) {
   fs.mkdirSync(outputFolder, { recursive: true });
 }
 
-// Pick songs folder from candidates in order: explicit SONGS_FOLDER, repo public/audio, default Documents dir
-const candidates = [];
-if (process.env.SONGS_FOLDER) candidates.push(process.env.SONGS_FOLDER);
-if (fs.existsSync(repoAudioDir)) candidates.push(repoAudioDir);
-candidates.push(defaultDocsDir);
-
+// Pick songs folder: prefer explicit SONGS_FOLDER, otherwise require repo `public/audio`.
 let songs = [];
 let chosen = null;
-for (const cand of candidates) {
+if (process.env.SONGS_FOLDER) {
+  // If user explicitly set SONGS_FOLDER, respect it.
   try {
-    if (!fs.existsSync(cand)) continue;
-    const found = fs.readdirSync(cand).filter((f) => f.toLowerCase().endsWith('.mp3'));
-    if (found.length > 0) {
-      songs = found.sort();
-      chosen = cand;
-      break;
+    if (fs.existsSync(process.env.SONGS_FOLDER)) {
+      const found = fs.readdirSync(process.env.SONGS_FOLDER).filter((f) => f.toLowerCase().endsWith('.mp3'));
+      if (found.length > 0) {
+        songs = found.sort();
+        chosen = process.env.SONGS_FOLDER;
+      }
     }
   } catch (e) {
-    // ignore and try next
+    // fall through to repo audio
   }
 }
 
 if (!chosen) {
-  console.error(`\nNo MP3 files found in any candidate folders: ${candidates.join(', ')}`);
-  console.error('Add .mp3 files to one of these or set SONGS_FOLDER to point to your songs directory.');
+  // Require repo public/audio to exist with MP3s when SONGS_FOLDER not provided.
+  if (fs.existsSync(repoAudioDir)) {
+    const found = fs.readdirSync(repoAudioDir).filter((f) => f.toLowerCase().endsWith('.mp3'));
+    if (found.length > 0) {
+      songs = found.sort();
+      chosen = repoAudioDir;
+    }
+  }
+}
+
+if (!chosen) {
+  console.error('\nNo MP3 files found.');
+  console.error('Put your .mp3 files into `public/audio` inside the repository, or set the SONGS_FOLDER environment variable to point to a folder with MP3s.');
   process.exit(1);
 }
 
