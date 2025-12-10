@@ -15,7 +15,8 @@ if (fs.existsSync(repoAudioDir)) {
   songsFolder = repoAudioDir;
   console.log(`Using repository audio folder as songs source: ${songsFolder}`);
 }
-const outputFolder = path.join(require('os').homedir(), 'Documents', 'premium_videos');
+// Save rendered videos inside the repository workspace so Codespaces can access/download them.
+const outputFolder = path.join(__dirname, 'out');
 
 if (!fs.existsSync(outputFolder)) {
   fs.mkdirSync(outputFolder, { recursive: true });
