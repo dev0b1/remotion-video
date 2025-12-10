@@ -1,0 +1,13 @@
+{
+  "name": "ExRoast Video Devcontainer",
+  "image": "mcr.microsoft.com/devcontainers/node:18-bullseye",
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "forwardPorts": [],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode-remote.remote-containers"
+      ]
+    }
+  }
+}
