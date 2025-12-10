@@ -63,6 +63,10 @@ if (!chosen) {
 
 console.log(`Using songs folder: ${chosen} — ${songs.length} mp3(s) found`);
 
+// Make the chosen songs folder available to later logic as `songsFolder`.
+// (Previously referenced `songsFolder` was undefined and caused a crash.)
+const songsFolder = chosen;
+
 // Optional metadata CSV next to the songs folder: songs.csv
 // Format: filename,hookText,bgColor,lyrics
 // where `lyrics` is a JSON-encoded array of {start,text} lines.
