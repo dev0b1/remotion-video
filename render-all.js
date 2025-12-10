@@ -151,6 +151,28 @@ if (limit && Number.isFinite(limit) && limit > 0) {
     }
   }
 
+  // Try to prefer a system-installed Chromium if present. The bundled
+  // chrome-headless-shell can fail in minimal environments (missing
+  // shared libs like libatk). If the Codespace already has Chromium
+  // installed, point Puppeteer at it so Remotion uses the system binary.
+  const possibleChromiumPaths = [
+    '/usr/bin/chromium-browser',
+    '/usr/bin/chromium',
+    '/usr/bin/google-chrome-stable',
+    '/snap/bin/chromium',
+  ];
+  for (const p of possibleChromiumPaths) {
+    try {
+      if (fs.existsSync(p)) {
+        process.env.PUPPETEER_EXECUTABLE_PATH = p;
+        console.log(`Using system Chromium executable: ${p}`);
+        break;
+      }
+    } catch (e) {
+      // ignore and continue
+    }
+  }
+
   const bundled = await bundle(path.join(__dirname, './src/index.tsx'));
 
   for (let i = 0; i < songs.length; i++) {
