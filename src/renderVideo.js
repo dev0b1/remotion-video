@@ -20,6 +20,58 @@ async function renderVideo(audioPath, textEvents = [], outputPath, opts = {}) {
   const duration = audioBuffer.duration || 0;
   const totalFrames = Math.max(1, Math.floor(duration * fps));
 
+  // If canvas is not available (native canvas not installed), fall back to ffmpeg-only renderer
+  if (!canvas || !ctx) {
+    console.log('Canvas not available — using ffmpeg filter fallback renderer (no native canvas).');
+
+    // build drawtext filters for textEvents
+    const drawtextFilters = (textEvents || []).map((ev) => {
+      const start = Number(ev.start || 0);
+      const end = Number(ev.end || Math.max(start + 2, start + 3));
+      const text = String(ev.text || '').replace(/'/g, "\\'").replace(/:/g, '\\:');
+      const fontsize = Number(ev.fontSize || Math.floor(height * 0.06));
+      const fontcolor = ev.color || 'white';
+      const x = (typeof ev.x !== 'undefined') ? ev.x : `(w-text_w)/2`;
+      const y = (typeof ev.y !== 'undefined') ? ev.y : `h-${Math.floor(height * 0.15)}`;
+      let dt = `drawtext=`;
+      if (ev.fontfile) dt += `fontfile='${ev.fontfile}':`;
+      dt += `text='${text}':fontcolor=${fontcolor}:fontsize=${fontsize}:x=${x}:y=${y}:enable='between(t,${start},${end})'`;
+      return dt;
+    });
+
+    const waveSize = `${width}x${Math.max(100, Math.floor(height * 0.6))}`;
+    let filterChain = `[0:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,showwaves=s=${waveSize}:mode=line:colors=white`;
+    if (drawtextFilters.length) filterChain += `,` + drawtextFilters.join(',');
+    filterChain += `[v]`;
+
+    const ffmpegArgs = [
+      '-y',
+      '-i', audioPath,
+      '-filter_complex', filterChain,
+      '-map', '[v]',
+      '-map', '0:a',
+      '-c:v', 'libx264',
+      '-pix_fmt', 'yuv420p',
+      '-shortest',
+      outputPath,
+    ];
+
+    console.log('Spawning ffmpeg with args:', ffmpegArgs.join(' '));
+
+    return new Promise((resolve, reject) => {
+      const ff = spawn('ffmpeg', ffmpegArgs, { stdio: 'inherit' });
+      ff.on('error', (err) => reject(err));
+      ff.on('close', (code) => {
+        if (code === 0) {
+          console.log('Render complete:', outputPath);
+          resolve();
+        } else {
+          reject(new Error('ffmpeg exited with code ' + code));
+        }
+      });
+    });
+  }
+
   // spawn ffmpeg to accept raw frames from stdin
   const ffmpegArgs = [
     '-y',

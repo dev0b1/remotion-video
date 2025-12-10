@@ -7,8 +7,6 @@
     "install-deps": "npm install"
   },
   "dependencies": {
-    "canvas": "^2.11.2",
-    "audiomotion-analyzer": "^2.1.0",
     "fluent-ffmpeg": "^2.1.2",
     "ffmpeg-static": "^4.4.0",
     "adm-zip": "^0.5.9"

@@ -1,12 +1,22 @@
-const { createCanvas } = require('canvas');
-let AudioMotion;
+let createCanvas = null;
+let AudioMotion = null;
+try {
+  // lazy-require canvas (may not be installed on Windows without build tools)
+  ({ createCanvas } = require('canvas'));
+} catch (err) {
+  createCanvas = null;
+}
+
 try {
   AudioMotion = require('audiomotion-analyzer');
-} catch (e) {
+} catch (err) {
   AudioMotion = null;
 }
 
 function _createCanvasAndCtx(width = 1080, height = 1080) {
+  if (!createCanvas) {
+    return { canvas: null, ctx: null };
+  }
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext('2d');
   return { canvas, ctx };
