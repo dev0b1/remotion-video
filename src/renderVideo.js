@@ -16,7 +16,7 @@ async function renderVideo(audioPath, textEvents = [], outputPath, opts = {}) {
 
   const { canvas, ctx, audioMotion } = initAudioMotion(width, height);
   const audioBuffer = await loadAudioBuffer(audioPath);
-  const duration = audioBuffer.duration;
+  const duration = audioBuffer.duration || 0;
   const totalFrames = Math.max(1, Math.floor(duration * fps));
 
   // spawn ffmpeg to accept raw frames from stdin
@@ -40,23 +40,20 @@ async function renderVideo(audioPath, textEvents = [], outputPath, opts = {}) {
     console.error('ffmpeg spawn error:', err);
   });
 
-  // main render loop
   try {
     for (let f = 0; f < totalFrames; f++) {
       const t = f / fps;
-      // allow audioMotion to position itself for this time
-      if (audioMotion && typeof audioMotion.setTime === 'function') {
-        try { audioMotion.setTime(t); } catch (e) { /* ignore */ }
-      }
+      // update AudioMotion / visualizer time
+      try { if (audioMotion && typeof audioMotion.setTime === 'function') audioMotion.setTime(t); } catch (e) {}
 
       // clear frame
       ctx.clearRect(0, 0, width, height);
 
-      // Ask AudioMotion to draw its visualization onto the canvas
+      // draw visualizer
       try { if (audioMotion && typeof audioMotion.draw === 'function') audioMotion.draw(); } catch (e) {}
 
-      // draw pop-up text for this timestamp
-      try { drawPopupText(ctx, textEvents, t, opts.text || {}); } catch (e) {}
+      // draw popup text
+      try { drawPopupText(ctx, textEvents, t, { width, height }); } catch (e) {}
 
       // write raw RGBA buffer
       const buffer = canvas.toBuffer('raw');
