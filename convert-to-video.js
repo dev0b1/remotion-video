@@ -72,7 +72,7 @@ function processNext() {
   console.log(`Elapsed: ${Math.round(elapsedMinutes)} min | Estimated remaining: ${estimatedRemaining} min`);
 
   // sanitize text to avoid breaking ffmpeg filter quoting
-  const safeHookText = String(hookText).replace(/'/g, "\\'\").replace(/’/g, "'\");
+  const safeHookText = String(hookText).replace(/'/g, "\\'").replace(/’/g, "'");
 
   // build and log the complex filter for easier debugging
   const complexFilterStr =
@@ -89,9 +89,9 @@ function processNext() {
 
   // 3. Circular mask
   'color=c=black:s=1080x1080[maskbase];' +
-  '[maskbase]drawbox=x=0:y=0:w=1080:h=1080:c=white@1:t=fill,format=alpha[mask];' +
+  '[maskbase]drawbox=x=0:y=0:w=1080:h=1080:c=white@1:t=fill,format=rgba[mask];' +
   '[spec_neon][mask]alphamerge[spec_circle];' +
-  '[spec1][mask]alphamerge=inputs=2[spec_sharp];' +
+  '[spec1][mask]alphamerge[spec_sharp];' +
 
   // 4. Outer neon ring + inner dark hole
   '[bg][spec_glow2]overlay=(W-w)/2:(H-h)/2:format=auto[bg1];' +
@@ -102,7 +102,7 @@ function processNext() {
   // 5. PULSING LOGO
   `[bg4]drawtext=text='exroast.buzz':fontfile='C\\:/Windows/Fonts/impact.ttf':` +
   `fontsize=96:fontcolor=#FF00E0:x=(w-text_w)/2:y=(h-text_h)/2+sin(t*3)*10:` +
-  `shadowcolor=#000:shadowx=5:shadowy=5:borderw=4:bordercolor=#00FFFF,scale='iw*(1+0.12*sin(t*PI*2))':'ih*(1+0.12*sin(t*PI*2))'[main];` +
+  `shadowcolor=#000000:shadowx=5:shadowy=5:borderw=4:bordercolor=#00FFFF,scale='iw*(1+0.12*sin(t*PI*2))':'ih*(1+0.12*sin(t*PI*2))':eval=frame[main];` +
 
   // 6. 0–3s HOOK EXPLOSION (massive zoom + flash)
   `[main]split=2[main][hookbase];` +
@@ -123,7 +123,7 @@ function processNext() {
   `[ly_final]drawtext=text='This AI is TOO petty':fontfile='C\\:/Windows/Fonts/impact.ttf':` +
   `fontsize=64:fontcolor=white:x=(w-text_w)/2:y=h-260:enable='gte(t,5)':` +
   `shadowcolor=#FF0099:shadowx=5:shadowy=5,format=rgba,drawbox=x=iw/2-300:y=oh-100:w=600:h=90:c=#330044@0.9:t=fill:enable='gte(t,5)',` +
-  `scale='if(gte(t,5),iw*(1+0.08*sin(t*8)),iw)':'if(gte(t,5),ih*(1+0.08*sin(t*8)),ih)':enable='gte(t,5)'[caption1];` +
+  `scale='if(gte(t,5),iw*(1+0.08*sin(t*8)),iw)':'if(gte(t,5),ih*(1+0.08*sin(t*8)),ih)':eval=frame:enable='gte(t,5)'[caption1];` +
 
   // Rotate savage text every ~7.5s
   `[caption1]drawtext=text='He\'s crying in the DMs':fontsize=64:fontcolor=white:x=(w-text_w)/2:y=h-260:enable='gte(t,12.5)*lt(t,20)':shadowcolor=#FF0099:shadowx=5:shadowy=5[caption2];` +
@@ -133,35 +133,45 @@ function processNext() {
   console.log('\n--- FFmpeg complex filter (preview) ---\n');
   console.log(complexFilterStr.slice(0, 2000));
 
-  ffmpeg(inputPath)
-    .setStartTime(0)
-    .setDuration(60)
-    .complexFilter([complexFilterStr])
-    .on('stderr', function(line) { console.error('FFMPEG STDERR:', line); })
-    .outputOptions([
-      '-c:v', 'libx264',
-      '-preset', 'veryfast',
-      '-crf', '23',
-      '-b:a', '128k',
-      '-pix_fmt', 'yuv420p',
-      '-movflags', '+faststart',
-      '-t', '60'
-    ])
-    .on('progress', (progress) => {
-      if (progress.percent) {
-        process.stdout.write(`\rProgress: ${Math.round(progress.percent)}%`);
-      }
-    })
-    .on('end', () => {
+  // write the filtergraph to a temp script and run ffmpeg directly (avoids shell/quoting issues)
+  const os = require('os');
+  const child_process = require('child_process');
+  const ffmpegBin = require('ffmpeg-static');
+
+  const scriptPath = path.join(os.tmpdir(), `fffilter-${Date.now()}.txt`);
+  fs.writeFileSync(scriptPath, complexFilterStr, 'utf8');
+
+  const args = [
+    '-y',
+    '-i', inputPath,
+    '-filter_complex_script', scriptPath,
+    '-map', '[final]',
+    '-map', '0:a',
+    '-c:v', 'libx264',
+    '-preset', 'veryfast',
+    '-crf', '23',
+    '-c:a', 'aac',
+    '-b:a', '128k',
+    '-pix_fmt', 'yuv420p',
+    '-movflags', '+faststart',
+    '-t', '60',
+    '-threads', '2',
+    outputPath
+  ];
+
+  const proc = child_process.spawn(ffmpegBin, args);
+  proc.stderr.on('data', (data) => process.stderr.write(data.toString()));
+  proc.stdout.on('data', (data) => process.stdout.write(data.toString()));
+  proc.on('close', (code) => {
+    try { fs.unlinkSync(scriptPath); } catch (e) {}
+    if (code === 0) {
       console.log(`\n✓ DONE: ${path.basename(outputPath)}`);
       console.log(`   Saved to: ${outputPath}`);
-      processNext();
-    })
-    .on('error', err => {
-      console.error(`\n✗ ERROR: ${err.message}`);
-      processNext();
-    })
-    .save(outputPath);
+    } else {
+      console.error(`\n✗ ERROR: ffmpeg exited with code ${code}`);
+    }
+    processNext();
+  });
 }
 
 processNext();
