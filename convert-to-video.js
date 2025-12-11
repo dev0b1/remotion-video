@@ -71,10 +71,11 @@ function processNext() {
   console.log(`\n[${completed}/5] Converting: ${file}`);
   console.log(`Elapsed: ${Math.round(elapsedMinutes)} min | Estimated remaining: ${estimatedRemaining} min`);
 
-  ffmpeg(inputPath)
-    .setStartTime(0)
-    .setDuration(60)
-    .complexFilter([
+  // sanitize text to avoid breaking ffmpeg filter quoting
+  const safeHookText = String(hookText).replace(/'/g, "\\'\").replace(/’/g, "'\");
+
+  // build and log the complex filter for easier debugging
+  const complexFilterStr =
 
   // 1. Background
   `color=c=${bgColor}:s=1080x1920:r=30:d=60[bg];` +
@@ -105,7 +106,7 @@ function processNext() {
 
   // 6. 0–3s HOOK EXPLOSION (massive zoom + flash)
   `[main]split=2[main][hookbase];` +
-  `[hookbase]drawtext=text='${hookText}':fontfile='C\\:/Windows/Fonts/impact.ttf':fontsize=180:fontcolor=white:` +
+  `[hookbase]drawtext=text='${safeHookText}':fontfile='C\\:/Windows/Fonts/impact.ttf':fontsize=180:fontcolor=white:` +
   `x='if(lt(t,3),(w-text_w)/2,10000)':y='if(lt(t,3),h/2-text_h/2 + (sin(t*12)*80),10000)':` +
   `enable='lt(t,3.3)':shadowcolor=#FF0099:shadowx=8:shadowy=8,zoompan=z='if(lte(t,3),4+sin(t*8)*0.5,1)':d=1:s=1080x1920[hook];` +
   `[hook]drawbox=t=fill:c=white@1:enable='between(t,0.9,1.0)+between(t,2.1,2.2)':x=0:y=0:w=w:h=h[hook_flash];` +
@@ -114,7 +115,7 @@ function processNext() {
   `[hook_flash]drawtext=text='She left me for his best friend':fontfile='C\\:/Windows/Fonts/impact.ttf':` +
   `fontsize=88:fontcolor=white:x=(w-text_w)/2:y=180:enable='gte(t,4.5)*lt(t,9)':` +
   `shadowcolor=#FF0099:shadowx=6:shadowy=6[ly1];` +
-  `[ly1]drawtext=text='Now he’s broke and lonely':fontsize=88:fontcolor=white:x=(w-text_w)/2:y=180:enable='gte(t,9.2)*lt(t,14)':shadowcolor=#FF0099:shadowx=6:shadowy=6[ly2];` +
+  `[ly1]drawtext=text='Now he\'s broke and lonely':fontsize=88:fontcolor=white:x=(w-text_w)/2:y=180:enable='gte(t,9.2)*lt(t,14)':shadowcolor=#FF0099:shadowx=6:shadowy=6[ly2];` +
   `[ly2]drawtext=text='This AI ended him':fontsize=88:fontcolor=white:x=(w-text_w)/2:y=180:enable='gte(t,14.5)*lt(t,20)':shadowcolor=#FF0099:shadowx=6:shadowy=6[ly3];` +
   `[ly3]drawtext=text='exroast.buzz':fontsize=88:fontcolor=#00FFFF:x=(w-text_w)/2:y=180:enable='gte(t,21)'[ly_final];` +
 
@@ -122,15 +123,21 @@ function processNext() {
   `[ly_final]drawtext=text='This AI is TOO petty':fontfile='C\\:/Windows/Fonts/impact.ttf':` +
   `fontsize=64:fontcolor=white:x=(w-text_w)/2:y=h-260:enable='gte(t,5)':` +
   `shadowcolor=#FF0099:shadowx=5:shadowy=5,format=rgba,drawbox=x=iw/2-300:y=oh-100:w=600:h=90:c=#330044@0.9:t=fill:enable='gte(t,5)',` +
-  
   `scale='if(gte(t,5),iw*(1+0.08*sin(t*8)),iw)':'if(gte(t,5),ih*(1+0.08*sin(t*8)),ih)':enable='gte(t,5)'[caption1];` +
 
   // Rotate savage text every ~7.5s
-  `[caption1]drawtext=text='He’s crying in the DMs':fontsize=64:fontcolor=white:x=(w-text_w)/2:y=h-260:enable='gte(t,12.5)*lt(t,20)':shadowcolor=#FF0099:shadowx=5:shadowy=5[caption2];` +
+  `[caption1]drawtext=text='He\'s crying in the DMs':fontsize=64:fontcolor=white:x=(w-text_w)/2:y=h-260:enable='gte(t,12.5)*lt(t,20)':shadowcolor=#FF0099:shadowx=5:shadowy=5[caption2];` +
   `[caption2]drawtext=text='Tag your toxic ex':fontsize=64:fontcolor=white:x=(w-text_w)/2:y=h-260:enable='gte(t,20)*lt(t,27.5)':shadowcolor=#FF0099:shadowx=5:shadowy=5[caption3];` +
-  `[caption3]drawtext=text='Karma used AI':fontsize=64:fontcolor=white:x=(w-text_w)/2:y=h-260:enable='gte(t,27.5)'[final]`
+  `[caption3]drawtext=text='Karma used AI':fontsize=64:fontcolor=white:x=(w-text_w)/2:y=h-260:enable='gte(t,27.5)'[final]`;
 
-    ])
+  console.log('\n--- FFmpeg complex filter (preview) ---\n');
+  console.log(complexFilterStr.slice(0, 2000));
+
+  ffmpeg(inputPath)
+    .setStartTime(0)
+    .setDuration(60)
+    .complexFilter([complexFilterStr])
+    .on('stderr', function(line) { console.error('FFMPEG STDERR:', line); })
     .outputOptions([
       '-c:v', 'libx264',
       '-preset', 'veryfast',
